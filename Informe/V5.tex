@@ -1,0 +1,470 @@
+\documentclass[twocolumn]{article}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[
+  backend=biber,
+  style=numeric,
+  sorting=none
+]{biblatex}
+\usepackage[margin=2.5cm]{geometry}
+\addbibresource{referencias_v2.bib}
+\raggedbottom
+
+\title{\textbf{Proyecto de Computación I}\\
+\large Estudio comparativo de simulaciones para el efecto suelo}
+\author{Eneko Ayanz Gayá y César Endris Acosta Martínez}
+\date{Abril 2026}
+
+\begin{document}
+
+\twocolumn[
+  \begin{center}
+    \maketitle
+    \vspace{-0.5cm}
+    \renewcommand{\abstractname}{Abstracto}
+    \begin{minipage}{0.9\textwidth}
+      \begin{abstract}
+        \noindent Se comparan tres aproximaciones computacionales de flujo potencial para la modelización del efecto suelo: un modelo analítico de Biot-Savart~\cite{wieselsberger1922}, un método de paneles 2D con dobletes~\cite{hess1967} y un método de malla de vórtices 3D (VLM)~\cite{katz2001}, implementados en MATLAB~\cite{matlab2024} y validados contra datos experimentales de túnel de viento~\cite{hernandez2012} y simulaciones CFD~\cite{autodesk2024}. El modelo de Biot-Savart reproduce exactamente la dependencia funcional $L \sim h^{-2}$ observada experimentalmente ($R^2 = 0.960$), aunque sobreestima la magnitud en un factor $\sim 2$ por la hipótesis de circulación uniforme. El método de paneles 2D predice incrementos despreciables ($\Delta C_L \approx 1.8\%$) al no capturar la reducción tridimensional del \textit{downwash}~\cite{ahmed2007}. El VLM 3D emerge como la herramienta más completa, proporcionando $C_L$, $C_{Di}$, $C_M$ y distribuciones de circulación \textit{spanwise} con predicciones cualitativamente correctas~\cite{zerihan2000}.
+        
+        \vspace{0.4cm}
+        \textbf{Palabras clave:} efecto suelo, Biot-Savart, método de paneles, VLM, NACA 0012, \textit{downwash}, vórtices de punta.
+      \end{abstract}
+    \end{minipage}
+    \vspace{1.2cm}
+  \end{center}
+]
+
+%---------------------------------------------------------------------
+\section{Introducción}
+
+El efecto suelo ocurre cuando un ala opera a una distancia del suelo comparable con su envergadura~\cite{wieselsberger1922,anderson2011}. La proximidad al suelo reduce el \textit{downwash} inducido por los vórtices de punta~\cite{prandtl1921}, lo que aumenta $C_L$ (hasta un 100\% para $h/b < 0.2$~\cite{ahmed2007}), reduce $C_{Di}$~\cite{zerihan2000} y genera un momento de encabritado~\cite{plotkin1988}. Sus aplicaciones van desde el despegue y aterrizaje de aeronaves hasta los vehículos WIG (\textit{Wing-In-Ground effect})~\cite{rozhdestvensky2006} y los vehículos de competición~\cite{fink1961}.
+
+Ante la disyuntiva entre métodos CFD de alta fidelidad pero elevado coste~\cite{raymer2018} y métodos potenciales de baja complejidad~\cite{katz2001}, este trabajo compara sistemáticamente tres enfoques de flujo potencial: (1) modelo analítico de Biot-Savart~\cite{wieselsberger1922}, (2) método de paneles 2D~\cite{hess1967} y (3) VLM 3D~\cite{katz2001}. La validación se realiza contra datos de túnel de viento~\cite{hernandez2012} y CFD~\cite{autodesk2024}.
+
+%---------------------------------------------------------------------
+\section{Fundamento Teórico}
+
+\subsection{Flujo Potencial}
+Los tres enfoques empleados se apoyan, en distinta medida, en la hipótesis de flujo incompresible, invíscido e irrotacional fuera de la superficie del cuerpo~\cite{anderson2011}. Bajo estas condiciones, el campo de velocidades $\vec{V}$ puede derivarse de un potencial escalar $\phi$ ($\vec{V} = \nabla \phi$), el cual debe satisfacer la ecuación de Laplace:
+\begin{equation}
+\nabla^2 \phi = 0.
+\label{eq:laplace}
+\end{equation}
+
+\subsection{El Método de las Imágenes}
+Para modelar la presencia del suelo sin necesidad de definir una malla física para la superficie terrestre, todos los modelos emplean el \textbf{Método de las Imágenes}. Este principio establece que la condición de contorno de superficie sólida (velocidad normal nula en $z=0$) se satisface matemáticamente colocando una configuración de fuentes o vórtices ``espejo'' por debajo del suelo~\cite{katz2001}. Estas singularidades imagen tienen la misma intensidad que las reales pero sentido de giro o flujo opuesto, cancelando la componente vertical de la velocidad en el plano de simetría.
+
+\subsection{Teorema de Kutta-Joukowski}
+La generación de sustentación ($L$) en todos los modelos se fundamenta en la relación entre la velocidad del flujo libre ($V_{\infty}$), la densidad ($\rho$) y la circulación ($\Gamma$)~\cite{prandtl1921}:
+\begin{equation}
+L = \rho V_{\infty} \Gamma b
+\label{eq:kj}
+\end{equation}
+
+\subsection{Relación funcional $L \sim h^{-2}$}
+
+Combinando la Ec.~\eqref{eq:kj} con el método de imágenes se obtiene la dependencia analítica~\cite{wieselsberger1922}:
+\begin{equation}
+    L(h) = L_{\infty} \left( 1 + \frac{b^2}{16h^2} \right),
+    \label{eq:lift_h}
+\end{equation}
+donde $L_\infty$ es la sustentación en campo libre. Linealizada en $h^{-2}$, permite extraer $L_\infty$ y $b$ por regresión, constituyendo el criterio de validación experimental.
+
+%---------------------------------------------------------------------
+\section{Metodologías}
+
+\subsection{Metodología general}
+La comparación se realiza sobre una misma geometría y bajo un conjunto coherente de hipótesis físicas. En todos los casos se estudia la variación de la sustentación con la altura al suelo y, cuando el método lo permite, también la distribución de velocidades, presión, arrastre inducido y momento de cabeceo. Las variables principales consideradas son: altura $h$, envergadura $b$, circulación $\Gamma$, velocidad del flujo libre $V_{\infty}$, longitud de estela, densidad del aire $\rho$, así como, en el estudio dinámico, altura inicial $h_0$, masa $m$, gravedad $g$, coeficiente de arrastre $p$, tiempo final de simulación $t_{\mathrm{final}}$ y paso temporal $dt$.
+
+\subsection{Método 1: Biot-Savart}
+
+\subsubsection{Descripción}
+
+El primer método implementa la solución analítica de Wieselsberger~\cite{wieselsberger1922} para un ala idealizada como línea de vórtice de envergadura finita. Se fijan los ejes: X paralelo al viento, Y a lo largo de la envergadura, y Z perpendicular al suelo. El ala se modela como dos vórtices puntuales en los extremos más una estela semi-infinita, junto con su imagen simétrica respecto a $z = 0$ con circulación invertida. Los parámetros de entrada son: altura $h$ [m], envergadura $b$ [m], circulación $\Gamma$ [m²/s], velocidad $V_\infty$ [m/s], longitud de estela $L_{\text{estela}}$ [m], y densidad $\rho$ [kg/m³].
+
+\subsubsection{Fundamento}
+
+A partir del campo de velocidades generado por la ley de Biot-Savart~\cite{prandtl1921}, se calcula el \textit{downwash} $w$ en el centro del ala al final de la estela (donde las discontinuidades son mínimas). Aplicando el teorema de Prandtl, que establece que el \textit{downwash} en campo lejano es el doble que sobre el ala, y la Teoría de la Línea Sustentadora de Prandtl (TLSP), se obtiene:
+
+\begin{equation}
+    L \cdot w = P_{\text{in}} \quad \text{(Potencia inducida constante)}
+\end{equation}
+
+\begin{equation}
+   L_{\infty} = \rho \cdot V_{\infty} \cdot \Gamma \cdot b \quad \text{(Kutta-Joukowski)}
+\end{equation}
+
+\begin{equation}
+    \frac{L_{\text{total}}}{L_{\infty}} = \frac{w_{\infty}}{w_{\text{total}}} \quad \text{(Proporcionalidad inversa)}
+\end{equation}
+
+\subsubsection{Extensión dinámica}
+
+Utilizando el método de Heun~\cite{burden2015}, se simula la evolución temporal del sistema bajo fuerzas de sustentación $L(h)$, peso $mg$ y arrastre $p \cdot v$. Los parámetros adicionales son: $h_0$, $m$, $g$, $p$, $t_{\text{final}}$ y $dt$. Para eficiencia computacional, el campo de velocidades se calcula solo en el punto de medición en cada paso temporal, evitando reconstruir todo el mapa 3D.
+
+\subsection{Método 2: Paneles 2D con Dobletes}
+
+\subsubsection{Descripción}
+Este método discretiza el contorno del perfil NACA 0012 en $N$ paneles~\cite{hess1967}. A diferencia del anterior, modela explícitamente el espesor del ala. La formulación se basa en resolver un sistema de ecuaciones lineales donde la influencia de cada panel (real más imagen) sobre los puntos de control debe anular el flujo normal:
+
+\begin{equation}
+\sum_{j=1}^{N} A_{ij} \mu_j = -\vec{V}_{\infty} \cdot \vec{n}_i
+\end{equation}
+
+donde $\mu$ representa la intensidad de los dobletes.
+
+\subsubsection{Velocidad inducida}
+La velocidad inducida por un doblete (gradiente del potencial $\nabla \phi$)~\cite{hess1967} se calcula usando la Ec.~\eqref{eq:laplace}:
+
+\begin{equation}
+\vec{v} = \frac{\mu}{2\pi} \left[ \frac{\vec{t}}{r^2} - \frac{2\vec{R}(\vec{t}\cdot\vec{R})}{r^4} \right]
+\label{eq:doblete}
+\end{equation}
+
+Para cada panel imagen, la componente vertical se invierte. Las contribuciones se proyectan sobre la normal del panel evaluado.
+
+\subsubsection{Condición de Kutta}
+La condición de Kutta~\cite{katz2001} se impone explícitamente reemplazando la última ecuación del sistema para garantizar continuidad del potencial en el borde de salida:
+
+\begin{equation}
+\mu(1) = \mu(N_{\text{paneles}})
+\end{equation}
+
+\subsubsection{Coeficiente de presión}
+La velocidad tangencial total $V_t$ permite calcular:
+
+\begin{equation}
+C_p = 1 - \left(\frac{V_t}{V_{\infty}}\right)^2
+\label{eq:cp}
+\end{equation}
+
+\subsection{Método 3: VLM 3D}
+
+\subsubsection{Descripción}
+Es el modelo más completo, dividiendo el ala en una retícula tridimensional de paneles. La geometría se discretiza mediante distribución coseno para evitar oscilaciones de Gibbs~\cite{katz2001}, concentrando puntos en borde de ataque y fuga. Cada panel contiene una ``herradura de vórtices'' compuesta por un segmento ligado y dos piernas semi-infinitas que constituyen la estela.
+
+\subsubsection{Regla de Weissinger}
+El vórtice ligado se coloca al 25\% de la cuerda local, y el punto de control al 75\%, garantizando implícitamente la condición de Kutta~\cite{weissinger1947}.
+
+\subsubsection{Ley de Biot-Savart regularizada}
+Para evitar singularidades numéricas, la velocidad inducida por un segmento $\vec{r}_0$ delimitado por vectores $\vec{r}_1$ y $\vec{r}_2$ se calcula como~\cite{katz2001}:
+
+\begin{equation}
+\vec{V} = \frac{1}{4\pi} \frac{\frac{\vec{r}_0 \cdot \vec{r}_1}{|\vec{r}_1|} - \frac{\vec{r}_0 \cdot \vec{r}_2}{|\vec{r}_2|}}{|\vec{r}_1 \times \vec{r}_2|^2} (\vec{r}_1 \times \vec{r}_2)
+\end{equation}
+
+\subsubsection{Integración de fuerzas}
+Las fuerzas se integran discretamente aplicando Ec.~\eqref{eq:kj} local:
+
+\begin{equation}
+\Delta L = \rho \cdot V_{\infty} \cdot \Gamma_k \cdot \Delta y
+\end{equation}
+
+La división en franjas spanwise captura la variación de circulación debido a vórtices de punta, que reducen $\Gamma$ a cero en los extremos.
+
+\subsubsection{Arrastre inducido y factor de Oswald}
+A diferencia de los métodos anteriores, el VLM cuantifica $C_{Di}$ mediante~\cite{raymer2018}:
+
+\begin{equation}
+C_{Di} = \frac{C_L^2}{\pi \cdot e_{\text{oswald}} \cdot AR}
+\label{eq:cdi}
+\end{equation}
+
+Para $AR < 4$, se usa la aproximación de Raymer~\cite{raymer2018}:
+
+\begin{equation}
+e_{\text{oswald}} = 1.78(1 - 0.045 AR^{0.68}) - 0.64
+\end{equation}
+
+
+%---------------------------------------------------------------------
+\section{Resultados}
+
+\subsection{Método 1: Biot-Savart}
+
+Se compara la implementación numérica con la solución analítica (Ec.~\eqref{eq:lift_h}) para $\rho = 1.225$ kg/m³, $L_{\text{estela}} = 80$ m, $\Gamma = 25$ m²/s y $V_\infty = 15$ m/s. La Fig.~\ref{fig:error_superficie_M1} muestra la superficie de error; se mantiene por debajo del 0.2\%, con el leve incremento a valores altos de $h$ y $b$ debido a la aproximación $x \to \infty$ evaluada en $x = 40$ m.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{grafica_error.png}
+    \caption{Error relativo entre la Ec.~\eqref{eq:lift_h} y la simulación (Método~1).}
+    \label{fig:error_superficie_M1}
+\end{figure}
+
+Para $b = 12$ m, la Fig.~\ref{fig:lift_altura_M1} confirma la dependencia $L \sim h^{-2}$ de la Ec.~\eqref{eq:lift_h}, con saturación hacia $L_\infty$ para $h/b > 0.8$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{L_respecto_h.png}
+    \caption{Método~1: sustentación vs altura ($b = 12$ m).}
+    \label{fig:lift_altura_M1}
+\end{figure}
+
+La Fig.~\ref{M1_H} presenta la simulación dinámica (Heun~\cite{burden2015}) para $m = 800$ kg y $p = 600$ Ns/m~\cite{raymer2018}: el ala alcanza un equilibrio dinámico en la zona de máximo efecto suelo, comportamiento análogo al de vehículos WIG~\cite{rozhdestvensky2006}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{plot_M1_H.png}
+    \caption{Método~1: predicción dinámica $h(t)$ (Heun~\cite{burden2015}).}
+    \label{M1_H}
+\end{figure}
+
+\subsection{Método 2: Panel Method 2D}
+
+La Fig.~\ref{fig:c_lift_altura_M2} muestra que $C_L$ varía apenas $\Delta C_L \approx 1.8\%$ en todo el rango de alturas, y la Fig.~\ref{fig:lift_altura_M2} confirma la misma tendencia en fuerza absoluta. Ambas figuras evidencian que la modificación bidimensional del campo de presión por el suelo es despreciable frente al efecto 3D de supresión del \textit{downwash}~\cite{ahmed2007}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{M2_CL.png}
+    \caption{Método~2: $C_L$ vs $h/c$ (NACA 0012).}
+    \label{fig:c_lift_altura_M2}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{M2_L.png}
+    \caption{Método~2: sustentación vs $h/c$.}
+    \label{fig:lift_altura_M2}
+\end{figure}
+
+\subsection{Método 3: VLM 3D}
+
+La Fig.~\ref{fig:M3_aerodinamica} muestra el análisis integral del VLM: reducción no lineal de $C_{Di}$ (Ec.~\eqref{eq:cdi}), aumento de $C_M$ hacia valores de encabritado a bajas alturas, y crecimiento de $L/D$ para $h/c$ moderado.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{M3_VLM — Efecto Suelo.png}
+    \caption{Método~3: $C_L$, $C_{Di}$, $C_M$ y $L/D$ vs $h/c$.}
+    \label{fig:M3_aerodinamica}
+\end{figure}
+
+La Fig.~\ref{fig:M3_circ_2d} muestra que al acercarse al suelo la distribución de circulación $\Gamma(y)$ no solo aumenta sino que se rectangulariza, indicando supresión del \textit{downwash} en las puntas y mayor uniformidad de la carga~\cite{plotkin1988}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{M3_Circulac.png}
+    \caption{Método~3: distribución $\Gamma(y)$ para distintos $h/c$.}
+    \label{fig:M3_circ_2d}
+\end{figure}
+
+En la Fig.~\ref{fig:M3_mapas_3d}, la subfigura~\subref{fig:M3_circ3da} detalla la circulación sobre la superficie alar y la subfigura~\subref{fig:M3_circ3db} presenta el mapa de $\Delta C_p$, donde se aprecia la mayor succión en borde de ataque y la sobrepresión en intradós que originan el momento de encabritado de la Fig.~\ref{fig:M3_aerodinamica}.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[t]{0.48\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{M3_Circulac_3D.png}
+        \caption{Circulación 3D.}
+        \label{fig:M3_circ3da}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{M3_Circulac_3D_2.png}
+        \caption{Mapa de $\Delta C_p$.}
+        \label{fig:M3_circ3db}
+    \end{subfigure}
+    \caption{Método~3: carga aerodinámica 3D ($h/c = 0.10$).}
+    \label{fig:M3_mapas_3d}
+\end{figure}
+
+La Fig.~\ref{fig:M3_fuerza_N} muestra la sustentación absoluta vs $h/c$, confirmando el comportamiento hiperbólico de la Ec.~\eqref{eq:lift_h} y la saturación hacia $L_\infty$ para $h/c > 2$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{M3_L.png}
+    \caption{Método~3: sustentación total [N] vs $h/c$.}
+    \label{fig:M3_fuerza_N}
+\end{figure}
+
+%---------------------------------------------------------------------
+\section{Discusión}
+\label{sec:discusion}
+
+\subsection{Validación experimental y CFD}
+
+La validación de los tres métodos se realizó contra dos fuentes de referencia: datos experimentales del túnel de viento del IES Ramiro de Maeztu (2025) y simulaciones CFD en Autodesk Flow Design.
+
+Los datos experimentales~\cite{hernandez2012} corresponden a un ala de envergadura $b = 25.0 \pm 0.1$ cm, cuerda $c \approx 15$ cm ($AR \approx 1.67$), ensayada a $V_\infty = 7.36 \pm 0.08$ m/s y $\alpha = 3.8 \pm 1°$ en un túnel de tipo succión. Dos sensores de fuerza Vernier midieron la reacción vertical en los soportes. La linearización de los cinco datos válidos ($h = 45$--115 mm) en la forma $L$ vs $h^{-2}$ proporciona:
+
+\begin{equation}
+L = 509{,}449 \cdot h^{-2} + 261.6 \quad [L \text{ en mN}, h \text{ en m}]
+\end{equation}
+
+con $R^2 = 0.960$, confirmando la relación funcional predicha por Wieselsberger. El incremento máximo medido fue $\Delta L \approx +99\%$ a $h/b = 0.18$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{G_Exp.png}
+    \caption{Datos experimentales: $L$ vs $h$, ajuste $L \sim h^{-2}$ ($R^2 = 0.960$).}
+    \label{fig:lift_alturaE}
+\end{figure}
+
+Las simulaciones CFD (Autodesk Flow~\cite{autodesk2024}) se realizaron a $V_\infty = 16$ m/s, $\alpha \approx 3.5°$, con 100 iteraciones RANS por caso. El ajuste potencial arroja exponente $-0.263$ en lugar del $-2$ teórico, discrepancia atribuible a convergencia insuficiente (se requieren $\geq$ 500 iteraciones para RANS con geometría de suelo cercano~\cite{versteeg2007}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{G_Autodesk.png}
+    \caption{Datos CFD: $L$ vs $h$, ajuste potencial.}
+    \label{fig:lift_alturaA}
+\end{figure}
+
+La Fig.~\ref{fig:comparacion_simuladores} compara directamente el campo de velocidades del Método 1 con la simulación CFD. La subfigura~\subref{fig:comp_matlab} muestra vórtices bien definidos del modelo potencial, mientras que la subfigura~\subref{fig:comp_autodesk} evidencia la difusión viscosa y el ensanchamiento de la estela del flujo real; esta diferencia cualitativa explica por qué los modelos potenciales sobreestiman sistemáticamente la intensidad del efecto suelo.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=0.4\linewidth]{Imagen3D_M1.png}
+        \caption{Flujo potencial (Método~1, MATLAB).}
+        \label{fig:comp_matlab}
+    \end{subfigure}
+    \vspace{0.2cm}
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=0.4\linewidth]{Auto.png}
+        \caption{CFD viscoso (Autodesk Flow~\cite{autodesk2024}).}
+        \label{fig:comp_autodesk}
+    \end{subfigure}
+    \caption{Flujo potencial (a) vs CFD viscoso (b): la difusión viscosa explica la sobreestimación de los modelos potenciales.}
+    \label{fig:comparacion_simuladores}
+\end{figure}
+
+La Fig.~\ref{fig:NaveGE} muestra un vehículo WIG operacional cuyo diseño refleja las consecuencias del efecto suelo: ala de gran $AR$, baja altura de crucero y empennage elevado~\cite{rozhdestvensky2006}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{NaveGE.png}
+    \caption{Vehículo WIG operacional~\cite{worldaviation_groundeffect}.}
+    \label{fig:NaveGE}
+\end{figure}
+
+
+\subsection{Comparación de metodologías}
+
+\subsubsection{Método 1: Biot-Savart --- Fidelidad funcional con limitaciones cuantitativas}
+
+El modelo analítico de Biot-Savart reproduce exactamente la dependencia funcional $L \sim h^{-2}$ observada experimentalmente, con $R^2 = 1.0$ por construcción matemática~\cite{wieselsberger1922}. Esta concordancia valida la física subyacente del modelo: la reducción del \textit{downwash} por interferencia del suelo es el mecanismo dominante del efecto.
+
+Sin embargo, la magnitud absoluta presenta una sobreestimación sistemática de factor $\sim$2. Para el punto experimental de máximo efecto suelo ($h/b = 0.18$, $\Delta L_{\exp} = +99\%$), el modelo predice $\Delta L = +198\%$ a $h/b = 0.167$. Esta discrepancia se atribuye a dos hipótesis simplificadoras:
+
+\begin{itemize}
+    \item \textbf{Circulación uniforme:} El modelo asume $\Gamma$ constante a lo largo de la envergadura, equivalente a $AR \to \infty$. En realidad, para $AR = 1.67$ (experimento) la circulación cae a cero en las puntas por efecto de los vórtices tridimensionales, reduciendo la sustentación efectiva.
+    \item \textbf{Geometría infinitesimal:} El ala se modela como línea de vórtice con espesor $t = 0$. Esta aproximación es válida solo para $h, b \gg t$. A alturas $h/b < 0.2$, el espesor finito del perfil introduce efectos de bloqueo no capturados por el modelo.
+\end{itemize}
+
+A pesar de estas limitaciones, el método proporciona valor práctico significativo: tiempo de cálculo $< 1$ s, capacidad de generar campos de velocidad 3D para visualización (vs. 30 min en CFD comercial), y predicción correcta de la altura de equilibrio en simulación dinámica, fenómeno explotado por vehículos WIG operacionales.
+
+El dominio de validez se establece como: $h/b > 0.15$ (para minimizar efectos de espesor), $AR > 4$ (para aproximar circulación uniforme), y flujo adjunto sin separación ($\alpha < 10°$).
+
+\subsubsection{Método 2: Panel Method 2D --- Precisión local, ceguera global}
+
+El método de paneles 2D con dobletes implementa correctamente la física de flujo potencial alrededor del perfil NACA 0012~\cite{hess1967}. La función \texttt{dipoleVelocity2D} y la condición de Kutta están matemáticamente bien formuladas, produciendo distribuciones de $C_p$ consistentes con teoría de perfiles delgados.
+
+No obstante, el método predice incrementos de sustentación despreciables: $\Delta C_L \approx +1.8\%$ en todo el rango de alturas estudiado, frente al $+99\%$ experimental. Este resultado no constituye un error de implementación, sino una \textbf{limitación fundamental de la dimensionalidad del modelo}.
+
+El análisis dimensional revela la causa: en 2D (flujo plano), el problema es equivalente a $AR = \infty$. En este límite, no existen vórtices de punta, y el \textit{downwash} tridimensional que domina el efecto suelo desaparece~\cite{ahmed2007}. El efecto residual del 1.8\% corresponde únicamente a:
+
+\begin{itemize}
+    \item Modificación local del campo de presión por interferencia del suelo con el espesor del perfil.
+    \item Pequeña contribución de la redistribución de dobletes sobre la superficie.
+\end{itemize}
+
+Estos mecanismos bidimensionales son \textbf{despreciables} comparados con el efecto 3D de supresión del \textit{downwash} inducido. La subestimación de factor $\sim$55 confirma que \textbf{el efecto suelo es esencialmente tridimensional}.
+
+El dominio de aplicabilidad del Panel 2D se restringe a: optimización detallada de la distribución de $C_p$ sobre perfiles 2D, análisis de momentos locales, diseño de formas de borde de ataque, y problemas donde el AR es suficientemente alto ($> 10$) que los efectos 3D sean secundarios. No es apto para cuantificar efecto suelo en alas de AR finito.
+
+\subsubsection{Método 3: VLM 3D --- Completitud física con sobreestimación cuantitativa}
+
+El VLM 3D emerge como la metodología más comprehensiva~\cite{katz2001}, capturando simultáneamente:
+
+\begin{itemize}
+    \item Geometría tridimensional finita con vórtices de punta.
+    \item Distribución no uniforme de circulación $\Gamma(y)$ spanwise.
+    \item Coeficientes completos: $C_L$, $C_{Di}$, $C_M$, $L/D$.
+    \item Visualización de mapas 3D de $\Delta C_p$ y circulación.
+\end{itemize}
+
+La implementación con malla coseno, herraduras imagen y regularización doble de Biot-Savart está correctamente formulada. El método reproduce cualitativamente todas las tendencias observadas: incremento de $C_L$, reducción de $C_{Di}$, rectangularización de $\Gamma(y)$, y momento de encabritado.
+
+Sin embargo, presenta sobreestimación cuantitativa: para $h/c = 0.10$ (equivalente a $h/b \approx 0.05$ para $AR = 2$), predice $\Delta C_L = +165.7\%$, frente a $\sim 60$--80\% esperado~\cite{zerihan2000} para esa altura extrema. Dos causas explican esta discrepancia:
+
+\begin{itemize}
+    \item \textbf{Aproximación de ala delgada:} El VLM modela el ala como superficie de espesor cero con circulación distribuida. No captura el bloqueo viscoso ni la modificación del campo de presión por espesor finito a $h/c$ muy pequeños.
+    \item \textbf{Separación imagen-real:} Las herraduras imagen se colocan a distancia $2h$ de las reales. Para $h/c \to 0$, esta separación se vuelve del orden del espesor del perfil, violando la hipótesis de flujo potencial.
+\end{itemize}
+
+A pesar de ello, el VLM proporciona predicciones cualitativamente correctas para $h/c > 0.15$ y es la única metodología que revela el comportamiento crítico de $L/D$: a $h/c = 0.10$, $C_{Di}$ aumenta $+605.9\%$ (vs. $+165.7\%$ en $C_L$), resultando en caída de eficiencia de $L/D = 28.91$ a $10.88$ (−62.4\%). Este resultado es físicamente consistente: para $AR = 2$, el incremento cuadrático $C_{Di} \sim C_L^2$ supera la ganancia lineal de $C_L$, haciendo ineficiente operar a alturas extremadamente bajas.
+
+El dominio de validez se establece como: $h/c > 0.15$, $AR = 2$--$10$ (rango donde la malla 3D es esencial pero no prohibitivamente costosa), y flujo adjunto. Es la herramienta óptima para diseño preliminar de alas completas, análisis de estabilidad longitudinal, y predicción de distribuciones spanwise.
+
+\subsection{Relación $L \sim h^{-2}$: criterio discriminante}
+
+La capacidad de reproducir la dependencia funcional teórica $L \sim h^{-2}$ emerge como criterio discriminante de validez:
+
+\begin{itemize}
+    \item \textbf{Biot-Savart:} $R^2 = 1.0$ (exacto por construcción analítica).
+    \item \textbf{VLM 3D:} Forma consistente con $h^{-2}$ (no linearizado explícitamente, pero curva compatible).
+    \item \textbf{Panel 2D:} $\Delta C_L \approx \text{const}$, equivalente a exponente $\approx 0$ (plano).
+    \item \textbf{CFD (100 iter):} Exponente $-0.263$ (convergencia insuficiente~\cite{autodesk2024}).
+    \item \textbf{Experimento:} $R^2 = 0.960$ (validación empírica~\cite{hernandez2012}).
+\end{itemize}
+
+Esta jerarquía confirma que solo los modelos que incorporan la física tridimensional del \textit{downwash} pueden capturar el efecto suelo correctamente.
+
+\subsection{Marco de selección de metodología}
+
+Con base en el análisis comparativo, se propone el siguiente marco de decisión:
+
+\begin{enumerate}
+    \item \textbf{Estimación rápida de tendencias y $L_\infty$:} Biot-Savart (GE08). Aplicable cuando se requiere evaluación paramétrica instantánea y la magnitud absoluta puede calibrarse con factor de corrección empírico.
+    
+    \item \textbf{Optimización de geometría de perfil 2D:} Panel Method~\cite{hess1967}. Válido para análisis detallado de $C_p$ sobre secciones, diseño de bordes de ataque, y problemas donde $AR \gg 6$.
+    
+    \item \textbf{Diseño preliminar de ala completa 3D:} VLM~\cite{katz2001}. Método óptimo para balance entre fidelidad física (efectos 3D, vórtices de punta, $C_{Di}$, $C_M$) y eficiencia computacional (segundos vs. horas). Esencial para $AR = 2$--$10$.
+    
+    \item \textbf{Validación final con efectos viscosos:} CFD RANS con $\geq$ 500 iteraciones~\cite{versteeg2007}. Requerido para predicción cuantitativa absoluta, análisis de separación, y diseño crítico donde $\pm 5\%$ en $L$ tiene consecuencias operacionales.
+\end{enumerate}
+
+\subsection{Implicaciones para diseño de vehículos WIG}
+
+El análisis del VLM revela que, para $AR = 2$ (típico de WIG compactos), operar a $h/c < 0.15$ resulta contraproducente: aunque $C_L$ aumenta, el crecimiento superlineal de $C_{Di}$ domina, reduciendo $L/D$ por debajo del valor de vuelo libre. Vehículos WIG eficientes requieren $AR \geq 4$--$6$ para obtener beneficio neto en $L/D$, consistente con diseños operacionales documentados en literatura~\cite{rozhdestvensky2006}.
+
+La predicción de momento de encabritado creciente a bajas alturas subraya la necesidad de sistemas de control activo para mantener trim durante transición suelo-aire.
+
+\subsection{Líneas de trabajo futuro}
+
+\begin{enumerate}
+    \item \textbf{Corrección de $AR$ finito en Biot-Savart:} Factor empírico función de $AR$ para reducir la sobreestimación $\sim 2\times$ sin coste adicional.
+    \item \textbf{VLM con estela libre (\textit{free-wake}):} La geometría de la estela evoluciona con el campo de velocidades, eliminando la divergencia de la inducción imagen-real para $h/c < 0.15$.
+    \item \textbf{Acoplamiento Panel 2D--VLM:} Usar las distribuciones $C_p$ del Panel 2D para corregir la predicción de $C_M$ del VLM a bajo coste.
+    \item \textbf{CFD convergido:} Repetir las simulaciones con $\geq 500$ iteraciones~\cite{versteeg2007} y verificar si el exponente de la ley de potencia converge al valor teórico $-2$ de la Ec.~\eqref{eq:lift_h}.
+    \item \textbf{Alto ángulo de ataque:} Incorporar un modelo de separación de primer orden (e.g., corrección de Goradia-Lam) para extender la validez a condiciones de aterrizaje ($\alpha > 10°$).
+    \item \textbf{Estudio paramétrico $AR$--$h/c$:} Generar con el VLM mapas de $L/D$ óptimo en el espacio $(AR, h/c)$ para diseño directo de WIG.
+    \item \textbf{Suelo móvil:} Experimentos con banda transportadora para aislar el efecto suelo puro~\cite{zerihan2000} y reducir la incertidumbre de la referencia experimental de la Fig.~\ref{fig:lift_alturaE}.
+\end{enumerate}
+
+%---------------------------------------------------------------------
+\section{Conclusiones}
+
+El estudio establece cuatro resultados principales:
+
+\begin{enumerate}
+    \item El modelo de Biot-Savart~\cite{wieselsberger1922} reproduce exactamente $L \sim h^{-2}$ (Ec.~\eqref{eq:lift_h}, $R^2_{\exp} = 0.960$, Fig.~\ref{fig:lift_alturaE}), confirmando la reducción de \textit{downwash} como mecanismo dominante. La sobreestimación de factor $\sim 2$ se atribuye a la circulación uniforme ($AR \to \infty$).
+    \item El Panel 2D~\cite{hess1967} es incapaz de cuantificar el efecto suelo en alas de $AR$ finito ($\Delta C_L \approx 1.8\%$ vs $+99\%$ experimental, Figs.~\ref{fig:c_lift_altura_M2},~\ref{fig:lift_alturaE}): el efecto es esencialmente tridimensional.
+    \item El VLM 3D~\cite{katz2001} es el método óptimo para $h/c > 0.15$ y $AR = 2$--$10$, capturando efectos 3D (Fig.~\ref{fig:M3_aerodinamica}), distribuciones \textit{spanwise} (Fig.~\ref{fig:M3_circ_2d}) y el comportamiento crítico de $L/D$. Para $AR = 2$, $h/c < 0.15$ reduce $L/D$; diseños eficientes requieren $AR \geq 4$--$6$~\cite{rozhdestvensky2006}.
+    \item La relación $L \sim h^{-2}$ es el criterio discriminante: solo los métodos con física 3D del \textit{downwash} la reproducen. El marco de selección de la Sección~5.4 optimiza el balance precisión-coste según el problema.
+\end{enumerate}
+
+%---------------------------------------------------------------------
+\printbibliography
+
+\end{document}
