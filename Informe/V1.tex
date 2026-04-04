@@ -1,0 +1,196 @@
+\documentclass[two column]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{subcaption} % Paquete ideal para subfiguras
+\usepackage[backend=biber, style=apa]{biblatex}
+\addbibresource{referencias.bib} % Aquí le decimos cómo se llama tu archivo
+
+\title{Proyecto de Computación I: Estudio comparativo de simulaciones para el efecto suelo}
+\author{Eneko Ayanz Gayá y César Endris Acosta Martínez}
+\date{Abril 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+\newpage
+kuuusuud
+\newpage
+
+\section{Metodologías}
+\vspace{0.5cm}
+\subsection{Método 1: Biot-Savart}
+\subsubsection{Sumario}
+
+Antes de empezar con la explicación y por el bien del entendimiento, se fija el eje X cómo la dirección paralela al viento, el eje Y como la dirección sobre la que se extiende el ala (que en esta aproximación se aproxima como un alambre fino) y el eje Z como la dirección paralela a la altura sobre 0. Las condiciones iniciales que deben fijarse para llevar acabo la simulación son la altura $h\ (m)$, la envergadura $b\ (m)$, la circulación $\Gamma \ (º)$, la velocidad del viento $V_{inf} \ (m/s)$, largo de la estela $L_{estela} \ (m)$, densidad del aire $\rho \ (kg/m^3)$. para la primera parte; y la altura inicial $h_{0} \ (m)$, la masa del ala $m \ (kg)$, la aceleración gravitacional $g \ (m/s^2)$, el coeficiente de arrastre $p \ (kg/s)$, la duración de la simulación $t_{final} \ (s)$ y el paso del tiempo $dt$, para la segunda parte.
+\vspace{0.5cm}
+
+El primer método propuesto para la simulación del efecto suelo, consiste en la creación de un campo de velocidades del aire para dos vórtices ideales en los extremos de un ala fina con las ecuaciones de Boit-Savart, además se genera un ala simétrica con respecto al suelo cuyos vórtices giran en dirección contraria para recrear el rebote de los vórtices con el suelo (método imagen). A partir de este campo de velocidades, se mide la velocidad del viento a la altura del ala, en su centro, al final de su estela (puesto que cerca del ala hay discontinuidades en el campo de velocidades por el choque de los remolinos). En este punto aplicamos el teorema de Prandtl, que nos dice que cuando X tiende a infinito el downwash es el doble que en ala, porque hay vórtice a ambas direcciones, mientras que en esta solo hay en una dirección. 
+
+\vspace{0.5cm}
+
+Una vez obtenido, se aplica la Teoría de la Línea Sustentadora de Prandtl (TLSP) que establece que el producto de L (fuerza de sustentación ó lift) por $\omega$ (velocidad downwash) es la Potencia Inducida y no depende de la altura. Por lo que sabiendo el lift y el downwash en una altura infinita ($h>>b$) donde no interfiere el efecto suelo, podemos obtener el Lift para la altura donde si es relevante el efecto suelo.
+\vspace{5cm}
+
+% --- Inicio del bloque ---
+\begingroup
+% Cambiamos temporalmente el formato de la nota al pie para que use el número de ecuación
+\renewcommand{\thefootnote}{(\arabic{equation})}
+
+\begin{equation}
+    L \cdot w = P_{in}
+\end{equation}
+\footnotetext{Potencia inducida según TLSP}
+\begin{equation}
+   L_{\infty} = \rho \cdot V_{\infty} \cdot \Gamma \cdot b 
+\end{equation}
+\footnotetext{Lift sin efecto suelo (Jutta-Jokolouski)}
+\begin{equation}
+    \frac{L_{total}}{L_{\infty}} = \frac{w_{\infty}}{w_{total}}
+\end{equation}
+\footnotetext{Proporcionalidad inversa entre Lift ($L$) y downwash ($w$)}
+
+
+% Cerramos el grupo para no afectar a otras notas al pie del resto del documento
+\endgroup
+
+Cabe decir que en estas condiciones, simplificadas de ala fina y viento constante, el problema sí tiene solución analítica para $L(h)$.
+
+
+% --- Fin del bloque ---
+
+\vspace{0.5cm}
+
+\begingroup
+% Cambiamos temporalmente el formato de la nota al pie
+\renewcommand{\thefootnote}{(\arabic{equation})}
+
+\begin{equation}
+    L(h) = L_{\infty} \left( 1 + \frac{b^2}{16h^2} \right)
+\end{equation}
+\footnotetext{Solución analítica para la sustentación en función de la altura}
+
+% Cerramos el grupo
+\endgroup
+
+\vspace{0.5cm}
+
+Sin embargo, esta simulación permite estudiar también los flujos del aire y visualizarlos en 3D como se explicará a continuación, así como obtener la velocidad en cada punto (no solo el downwash).
+
+\vspace{0.5cm}
+
+Por último, utilizando el método de Heun junto con unas condiciones iniciales se puede ver como el sistema evoluciona con el tiempo bajo las fuerzas de sustentación ($L$), peso ($mg$) y arrastre ($p \cdot v$). Por un tema de tiempo de ejecución, se evita tener que crear todo el mapa de velocidades de viento a cada paso, se calcula solo las velocidades del aire en el punto de medida (a diferencia de para la representación 3D que se hace para un instante) y se repite el proceso para cada paso.
+
+\subsubsection{Resultados}
+
+Para analizar la efectividad del método en cuanto al cálculo del lift, una de las medidas es comparar con el resultado análitico presentado anteriormente. Para unos valores fijos densidad del aire ($\rho=1.225 \ kg/m^3$), longitud de estela ($L_{estela} = 80 \ m$), circulación ($\Gamma = 25 \ m^2/s$) y velocidad de viento ($V_{viento} = 15 \ m/s$ se ve como evoluciona el error para los distitas alturas y envergaduras. Se obtiene lo siguiente:
+\begin{figure}[htbp]
+    \centering
+    % Cambiamos .pdf por .png aquí:
+    \includegraphics[width=0.5\textwidth]{grafica_error.png}
+    \caption{Superficie de error relativo entre la aproximación teórica (factor empírico de Prandtl) y la simulación numérica (Biot-Savart).}
+    \label{fig:error_superficie}
+\end{figure}
+
+\vspace{0.5cm}
+
+Como se ve, el error de esta aproximación numérica mantiene un error por debajo del $0.2\%$ para las codiciones dadas, lo cual supone una aproximación efectiva para sacar conclusiones sobre el efecto suelo. En este punto cabría la pregunta de por qué el error aumenta tanto con la altura como con la envergadura. La respuesta es que esta gráfica compara la solucion analitica con el resultado numerico, no lo compara con los valores reales, y la razón de este aumento parte de la toma del dato para $x \rightarrow \infty$, que en la practica es un valor de $x$ finito (en este caso $x=40 \ m$), esto hace que la resolución numérica sea más parecida a la analítica cuanto, más grande sea la $x$ donde se mide con respecto a las otras magnitudes $b$ y $h$ (ambas en metros).
+
+\vspace{0.5cm}
+
+Para evaluar si estas condiciones de ala fina sirven para entender el fenómeno del efecto suelo en condiciones reales, lo que sí se puede hacer es comparar las predicciones del simulador con datos experimentales del fenómeno.
+
+\vspace{0.5cm}
+
+Estudiemos las predicciónes para la fuerza de sustentación ($L$) con respecto a ($h$). Para esto se tomarán las mismas condiciones fijas que en el caso anterior sumadas a una $b$ constante de $12 \ m$. La simulación obtiene los siguientes resultados.
+\begin{figure}[htbp]
+    \centering
+    % Cambiamos .pdf por .png aquí:
+    \includegraphics[width=0.35\textwidth]{L_respecto_h.png}
+    \caption{Fuerza de Sustentación ($L$) respecto a altura ($h$)}
+    \label{fig:lift_altura}
+\end{figure}
+
+\vspace{0.5cm}
+
+Por su parte, los datos con los que se dispone para la comparativa son los siguientes. Datos experimentales del 2025 en el túnel de viento del IES Ramiro de Maeztu:
+\begin{figure}[htbp]
+    \centering
+    % Cambiamos .pdf por .png aquí:
+    \includegraphics[width=0.35\textwidth]{G_Exp.png}
+    \caption{Experimental: Fuerza de Sustentación ($L$) respecto a altura ($h$)}
+    \label{fig:lift_alturaE}
+\end{figure}
+
+Además, para enriquezer la comparación se disponen de datos simulador por un software de referencia en la industria de la aereodinamica como es Autodeskt Flow:
+
+\begin{figure}[htbp]
+    \centering
+    % Cambiamos .pdf por .png aquí:
+    \includegraphics[width=0.35\textwidth]{G_Autodesk.png}
+    \caption{Autodeskt: Fuerza de Sustentación ($L$) respecto a altura ($h$)}
+    \label{fig:lift_alturaA}
+\end{figure}
+
+Cualitativamente, se puede apreciar una tendencia similar entre la predicción del Método 1: Biot-Savart y ambas otras referencias, aunque cabe la objección de que la asíntota vertical de esta simulación no coincide con la tendencia experimental, ni es tan acentuada en el autodeskt flow. Por partes, el hecho de que $L$ no crezca al ritmo previsto en los datos experimentales, podría deberse a limitaciónes fisicas del túnel de viento empleado, cuyas fugas se vuelven más notables a alturas muy bajas, sin embargo esto no basta para justificar del todo las discrepancias puesto que en simulaciones partícula a partícula como en Autodekt, la tendencia es más moderada. Esto se debe a que en la suposición inicial de esté método es un ala de grosor $T=0$, aproximación solo válida para para $h,\ b >> T$. En los datos de referencia se tienen modelos de ala reales que tienen un grosor no nulo, esto subraya una limitación inherente al método.
+
+\vspace{0.5cm}
+
+La ventaja de esta simulación diseñada en Matlab, es la posibilidad de visualización de los flujos de aire en tiempos de computación extremadamente cortos en comparación a programas como el ya mencionado Autodeskt Flow. Mientras que el programa comercial necesita alrededor de 30 minutos en un portatil de referencia con una gráfica RTX 3050 de 4GB de VRAM para poder visualizar y obtener datos estables del $L$, la aplicación del método 1 en Matlab requiere de menos de 5 segundos para realizar la tarea.
+\begin{figure}[htbp] % SIN asterisco, para que se quede en una sola columna
+    \centering
+    
+    % Imagen de arriba (Matlab)
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=0.6\linewidth]{Imagen3D_M1.png} % Cambia por el nombre de tu imagen
+        \caption{Simulación M1 (Matlab)}
+        \label{fig:comp_matlab}
+    \end{subfigure}
+    
+    \vspace{0.4cm} % Añade un poco de espacio vertical entre las dos imágenes
+    
+    % Imagen de abajo (Autodesk)
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=0.6\linewidth]{Auto.png} % Cambia por el nombre de tu imagen
+        \caption{Simulación Autodesk Flow}
+        \label{fig:comp_autodesk}
+    \end{subfigure}
+    
+    \caption{Comparación entre el comportamiento puramente teórico que asume una sustentación infinita (a), y la realidad experimental limitada por efectos viscosos y compresión (b).}
+    \label{fig:comparacion_simuladores}
+\end{figure}
+\vspace{0.5cm}
+
+Por último, la funcionalidad final de esté código es simular el comportamiento de un ala a la que se la deja caer desde una altura mayor a su posición de equilibrio con viento constante bajo la acción de las fuerzas de sustentación, peso y rozamiento con el aire. Cuya predicción para una masa de $800 \ kg$ (por ser similar a la de un planeador) y un coeficiente $p$ de $600 \ Ns/m$ es la siguiente:
+\begin{figure}[htbp]
+    \centering
+    % Cambiamos .pdf por .png aquí:
+    \includegraphics[width=0.35\textwidth]{plot_M1_H.png}
+    \caption{Predicción por Heun $h(t)$}
+    \label{M1_H}
+\end{figure}
+
+Pese a no disponer de unos datos de referencia se puede valorar positivamente la predicción de una altura de equilibrio puesto que esto es un fenómeno que ocurre y del que se aprovechan las aeronaves de efecto suelo que planean sobre lagos.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.35\textwidth]{NaveGE.png}
+    \caption{Aeronave de efecto suelo \parencite{worldaviation_groundeffect}.}
+    \label{fig:NaveGE}
+\end{figure}
+
+
+
+
+
+
+
+\section{Anexo y Referencias}
+\printbibliography
+\end{document}
+
