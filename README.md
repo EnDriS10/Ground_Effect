@@ -5,8 +5,6 @@
 El repositorio está dividido en 3 carpetas (M1, M2, M3) cada una correspondiente a uno de los métodos. A su vez, cada carpeta se divide en dos subcarpetas, una llamada "Codigo base" dónde esta el motor de cada simulación y otra carpeta llamada "Graficas" dónde encontrar alteraciones del motor principal del método para construir las diferentes graficas a distintas alturas, envergaduras o sacar los errores. En la carpeta de gráficas de M1 también se incluyen las gráficas experimentales y de CFD.
 
 
-####################################################################################################################################################################################################################################################################################################################
-
 # Análisis Aerodinámico Computacional: Estudio del Efecto Suelo
 
 Este repositorio contiene tres implementaciones en MATLAB diseñadas para estudiar el **Efecto Suelo**. Se abordan dos enfoques complementarios:un ala fina unidimensional en un espacio tridimensional (3D) con vórtices de Biot-Savart, un análisis bidimensional (2D) mediante el Método de Paneles y un análisis tridimensional (3D) mediante el Método de Red de Vórtices (VLM - *Vortex Lattice Method*). 
