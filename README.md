@@ -2,13 +2,13 @@
 
 # Análisis Aerodinámico Computacional: Estudio del Efecto Suelo
 
-Este repositorio contiene dos implementaciones en MATLAB diseñadas para estudiar el **efecto suelo** en superficies aerodinámicas. Se abordan dos enfoques complementarios: un análisis bidimensional (2D) mediante el Método de Paneles y un análisis tridimensional (3D) mediante el Método de Red de Vórtices (VLM - *Vortex Lattice Method*). 
+Este repositorio contiene dos implementaciones en MATLAB diseñadas para estudiar el **Efecto Suelo**. Se abordan dos enfoques complementarios: un análisis bidimensional (2D) mediante el Método de Paneles y un análisis tridimensional (3D) mediante el Método de Red de Vórtices (VLM - *Vortex Lattice Method*). 
 
 Ambos códigos utilizan el **Método de las Imágenes** para simular la presencia del suelo (plano de simetría aerodinámico) a diferentes alturas relativas (`h/c`).
 
 ---
 
-## 1. Método de Paneles 2D (`Panel_Method.m`)
+## M2. Método de Paneles 2D (`Panel_Method.m`)
 
 Este script evalúa el comportamiento de un perfil alar **NACA 0012** operando cerca del suelo. 
 
