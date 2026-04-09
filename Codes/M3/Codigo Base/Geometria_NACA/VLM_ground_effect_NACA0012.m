@@ -12,7 +12,6 @@ clear; clc; close all;
 % Geometría
 b        = 10.0;        % Envergadura [m]
 c        = 1.0;        % Cuerda [m]
-AR       = b / c;      % Alargamiento
 
 % Vuelo
 V_inf    = 15;         % Velocidad de la corriente libre [m/s]
@@ -20,12 +19,7 @@ alpha    = deg2rad(5); % Ángulo de ataque [rad]
 rho      = 1.225;      % Densidad del aire [kg/m³]
 S_ref    = b * c;      % Área de referencia [m²]
 
-% Factor de Oswald
-if AR < 4
-    e_oswald = 1.78 * (1 - 0.045 * AR^0.68) - 0.64;
-else
-    e_oswald = 0.95;
-end
+[AR , e_oswald] = Oswald(b,c);
 fprintf('Factor de Oswald calculado: e = %.3f (AR=%.1f)\n', e_oswald, AR);
 
 % Discretización
@@ -445,9 +439,22 @@ fprintf('%6s | %8.4f | %10.6f | %+10.4f | %8.2f | %7s\n', ...
         '∞', CL_free, CDi_free, CM_free, L_D_free, '0.0');
 fprintf('==============================================================\n');
 
+%%
 % =========================================================================
 %  FUNCIONES LOCALES
 % =========================================================================
+function [AR , e_oswald] = Oswald(b,c)
+    
+    AR       = b / c;      % Alargamiento
+
+    % Factor de Oswald para AR bajo (empírico, validado experimentalmente)
+    % Fórmula de Raymer: e ≈ 1.78*(1 - 0.045*AR^0.68) - 0.64
+    if AR < 4
+        e_oswald = 1.78 * (1 - 0.045 * AR^0.68) - 0.64;
+    else
+        e_oswald = 0.95;  % AR alto
+    end
+end
 
 function z = naca_z(x_abs, c, t_ratio)
 % Ordenada z del extradós del perfil NACA 4 dígitos simétrico
