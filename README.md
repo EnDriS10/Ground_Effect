@@ -30,7 +30,7 @@ Este script evalúa el comportamiento de un perfil alar **NACA 0012** operando c
 
 ## 2. Vortex Lattice Method 3D (`VLM_ground_effect_1.m`)
 
-Este script amplía el análisis a tres dimensiones, evaluando un ala de envergadura finita. Permite visualizar cómo el efecto suelo no solo aumenta la sustentación, sino que altera drásticamente la resistencia inducida debido a la interacción tridimensional de los vórtices.
+Este script amplía el análisis a tres dimensiones, evaluando un ala de envergadura finita y un perfil alar **NACA 0012**. Permite visualizar cómo el efecto suelo no solo aumenta la sustentación, sino que altera drásticamente la resistencia inducida debido a la interacción tridimensional de los vórtices.
 
 **Características Destacadas:**
 * **Distribución en Malla:** Utiliza una malla con distribución de coseno tanto en la dirección de la cuerda como en la envergadura, lo que garantiza alta fidelidad geométrica en las puntas del ala (wingtips) y bordes.
